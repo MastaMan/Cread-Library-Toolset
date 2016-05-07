@@ -28,8 +28,8 @@ fn getMaxVersion =
 	
 	o = case v of 
 	(
-		11: #(2010,2011)
-		12: #(2010,2011,2012)
+		11: #(a - 1, a)
+		12: #(a - 2, a - 1, a)
 		default: #(a - 3, a - 2, a - 1, a)		
 	)
 	
@@ -331,6 +331,12 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		print a
 	)
 	
+	on version1add pressed do
+	(
+		v = (version1.text as integer) + 1
+		
+		version1.text = getNum v
+	)
 
 )
 createDialog theRollout 610 680
