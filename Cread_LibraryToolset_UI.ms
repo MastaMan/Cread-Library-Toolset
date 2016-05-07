@@ -4,7 +4,7 @@ _____________________
 Cread Library Toolset 
 _____________________
 
-Version: 0.01a
+Version: 0.0.1
 Release date: 19th April 2016
 UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com
 Developer: MastaMan
@@ -49,6 +49,23 @@ fn getRender =
 	if matchpattern r pattern:"*maxwell*" do return #("_maxwell", "Maxwell")
 		
 	return #("", "")
+)
+
+fn getNum n c:2 =
+(
+	n = n as string
+	
+	if(n.count < c) do
+	(
+		d = c - n.count
+		
+		s = ""
+		
+		for i in 1 to d do s += "0"
+		return s + n
+	)
+	
+	return n
 )
 
 --TAB 1
