@@ -313,6 +313,79 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		if(i != 0) do ddl.selection = i
 	)
 	
+	
+	global gFileFormat = #( 
+			#("3D Studio Max", "max", "01"),
+			#("FBX", "fbx", "02"),
+			#("OBJ", "obj", "03")
+	)
+		
+	global gMaxVersion = #(
+		#("2011", "13"),
+		#("2012", "14"),
+		#("2013", "15"),
+		#("2014", "16"),
+		#("2015", "17"),
+		#("2016", "18"),
+		#("2017", "19"),
+		#("2018", "20")
+	)
+	
+	global gFbxVersion = #(
+		#("2011", "13"),
+		#("2012", "14"),
+		#("2013", "15"),
+		#("2014", "16"),
+		#("2015", "17"),
+		#("2016", "18"),
+		#("2017", "19"),
+		#("2018", "20")
+	)
+	
+	global gRenderVersion = #(
+		#("none", "00"),
+		#("VRay", "01"),
+		#("Corona", "02"),
+		#("Maxwell", "03")
+	)
+	
+	fn findAs a f = for i in a where i[1] == f do return i
+	
+	fn getControl p = for c in theRollout.controls where matchPattern c.name pattern:p do return c
+		
+	fn getModelFullName n:1 = 
+	(
+		n = n as string
+		
+		i = ID.text
+				
+		f = getControl ("format" + n)		
+		f = f.selected
+		f = findAs gFileFormat f
+		
+		s = getControl ("scn" + n)		
+		s = s.selected
+		s = findAs gMaxVersion s
+		ss = s[2]
+		
+		if(f[1] == "OBJ") do ss = "00"
+		
+		r = getControl ("render" + n)
+		r = r.selected
+		r = findAs gRenderVersion r
+		
+		v = getControl ("version" + n)
+		v = v.text
+		
+		return (i + "_" + f[3] + ss + r[2] + "V" + v + "." + f[2])
+	)
+	
+	fn displayModelName n:1 =
+	(
+		f = getControl ("fullname" + n as string)
+		f.text = getModelFullName n:n
+	)
+	
 	on theRollout open do
 	(
 		initTc tc
@@ -324,20 +397,75 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		fillRender render1
 		fillRender render2
 		fillRender render3
+		
+		displayModelName n:1
+		displayModelName n:2
+		displayModelName n:3
 	)
 
 	on ID changed a do
 	(
-		print a
+		displayModelName n:1
+		displayModelName n:2
+		displayModelName n:3
 	)
 	
+	on format1 selected a do displayModelName n:1
+	on scn1 selected a do displayModelName n:1
+	on render1 selected a do displayModelName n:1
+	on version1 changed t do displayModelName n:1
 	on version1add pressed do
 	(
 		v = (version1.text as integer) + 1
 		
 		version1.text = getNum v
+		
+		displayModelName n:1
+	)
+	on format2 selected a do displayModelName n:2
+	on scn2 selected a do displayModelName n:2
+	on render2 selected a do displayModelName n:2
+	on version2 changed t do displayModelName n:2
+	on version2add pressed do
+	(
+		v = (version2.text as integer) + 1
+		
+		version2.text = getNum v
+		
+		displayModelName n:2
+	)
+	on format3 selected a do displayModelName n:3
+	on scn3 selected a do displayModelName n:3
+	on render3 selected a do displayModelName n:3
+	on version3 changed t do displayModelName n:3
+	on version3add pressed do
+	(
+		v = (version3.text as integer) + 1
+		
+		version3.text = getNum v
+		
+		displayModelName n:3
 	)
 
+	on chk2 changed s do
+	(
+		format2.enabled = s
+		scn2.enabled = s
+		render2.enabled = s
+		version2.enabled = s
+		version2add.enabled = s
+		fullname2.enabled = s
+	)
+	
+	on chk3 changed s do
+	(
+		format3.enabled = s
+		scn3.enabled = s
+		render3.enabled = s
+		version3.enabled = s
+		version3add.enabled = s
+		fullname3.enabled = s
+	)
 )
 createDialog theRollout 610 680
 
