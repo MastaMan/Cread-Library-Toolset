@@ -17,6 +17,13 @@ Developer: MastaMan
 --Destroy dialog if it already exists.
 try(destroyDialog theRollout)catch()
 
+
+/* GLOBAL VARIABLES */
+
+global szSaveToPath = @"\\nas\library\"
+global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
+global szModelID = "1308"
+
 /* GLOBAL FUNCTIONS */
 
 fn getMaxVersion =
@@ -68,6 +75,45 @@ fn getNum n c:2 =
 	return n
 )
 
+
+fn useSettings k p w =
+(	
+	settingsFile = getThisScriptFilename() + ".ini"
+	
+	v = maxVersion()
+	v = 2000 + ((v[1] / 1000) - 2)
+	
+	case w of
+	(
+		"r":
+		(
+			s = getINISetting settingsFile (v as string) k
+			case p of
+			(
+				"int": return s as integer
+				"float": return s as float
+				"bool": if s == "true" or s.count < 1 then true else false
+				"bool_not": if s == "true" then true else false
+				
+				default: return s
+			)
+		)
+		default: return setINISetting settingsFile (v as string) k (p as string)
+	)
+)
+
+fn isSelected =
+(
+	if(selection.count < 1) do 
+	(
+		messageBox "Please select model!" title: "Warning!"
+		return false
+	)
+	
+	return true
+)
+
+
 --TAB 1
 
 rollout T1Rollout1 "OBJECTS"(
@@ -116,6 +162,75 @@ rollout T2Rollout1 "Geometry" (
 	
 	button btnCenterGeo "Center in Scene" pos:[450,40] width:100 height:34 align:#left
 	
+	fn ungroupRecursive s = for i in s where isGroupHead i and isValidNode i do explodeGroup i
+	
+	fn setPivot p =
+	(
+		selection.pivot = selection.center
+		selection.pivot.z = p
+			
+		ForceCompleteRedraw()
+	)
+	
+	on btnXform pressed do
+	(
+		if(not isSelected()) do return false
+		
+		for i in selection where superClassOf i == GeometryClass do
+		(			
+			ResetXForm i
+			collapseStack i
+		)
+	)
+	
+	on btnGroup pressed do
+	(
+		if(not isSelected()) do return false
+					
+		ungroupRecursive selection
+			
+		group selection name:szModelID select:true		
+	)
+	
+	on btnUngroup pressed do
+	(
+		if(not isSelected()) do return false
+			
+		ungroupRecursive selection
+	)
+	
+	on btnPvBottom pressed do
+	(
+		if(not isSelected()) do return false
+			
+		setPivot selection.min.z
+	)
+	
+	on btnPvTop pressed do
+	(
+		if(not isSelected()) do return false
+			
+		setPivot selection.max.z
+	)
+	
+	on btnPvCenter pressed do
+	(
+		if(not isSelected()) do return false
+			
+		selection.pivot = selection.center
+	)
+	
+	on btnCenterGeo pressed do
+	(
+		if(not isSelected()) do return false
+		
+		g = group selection
+
+		g.pos = [0,0,0]
+		g.pos.z = 0 - selection.min.z
+			
+		ungroup g		
+	)
 )
 
 --TAB 3
@@ -401,6 +516,13 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		displayModelName n:1
 		displayModelName n:2
 		displayModelName n:3
+		
+		n = useSettings "SAVETO" "string" "r"
+		r = FilterString n szGoodChars
+		
+		if(n != "" and n != undefined and r.count == 0) do szSaveToPath = n
+			
+		rootpath.text = szSaveToPath
 	)
 
 	on ID changed a do
@@ -408,6 +530,8 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		displayModelName n:1
 		displayModelName n:2
 		displayModelName n:3
+		
+		szModelID = ID.text
 	)
 	
 	on format1 selected a do displayModelName n:1
@@ -465,6 +589,23 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		version3.enabled = s
 		version3add.enabled = s
 		fullname3.enabled = s
+	)
+	
+	-- Select path
+	on btn14 pressed do
+	(
+		f = getSavePath  caption: "Select Path" initialDir: szSaveToPath
+		
+		if(f != undefined) do
+		(
+			p = FilterString f szGoodChars
+			if(p.count > 0) do return messageBox "The paths are not supported by cyrillic characters!\nPlease choose another path!" title: "Warning!"
+			
+			szSaveToPath = f + @"\"
+			rootpath.text = szSaveToPath
+									
+			useSettings "SAVETO" szSaveToPath "w"
+		)
 	)
 )
 createDialog theRollout 610 680
