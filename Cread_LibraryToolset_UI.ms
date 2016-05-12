@@ -4,7 +4,6 @@ _____________________
 Cread Library Toolset 
 _____________________
 
-Version: 0.0.1
 Release date: 19th April 2016
 UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com
 Developer: MastaMan
@@ -20,9 +19,14 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
+global szVersion = "0.0.2"
 global szSaveToPath = @"\\nas\library\"
+global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
 global szModelID = "1308"
+global szPreviewPath = #()
+global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
+global szScene = #()
 
 /* GLOBAL FUNCTIONS */
 
@@ -113,6 +117,35 @@ fn isSelected =
 	return true
 )
 
+fn polyCount s spaces: true =
+(	
+	iPoly = 0
+	
+	a = for i in s collect (getPolygonCount i)[1]
+	for i in a do iPoly += i
+	
+	r = ""
+	ii = 1
+	
+	if(spaces == false) do return iPoly as string
+	
+	for i in sPoly.count to 1 by -1 do
+	(
+		space = ""	
+			
+		if (ii == 3) do 
+		(
+			space = " "
+			ii = 0
+		)
+		
+		ii += 1
+		
+		r = space + sPoly[i] + r
+	)
+
+	return (trimLeft r " ")
+)
 
 --TAB 1
 
@@ -241,24 +274,133 @@ rollout T3rollout1 "Pictures"
 	dropdownList picList "" pos:[350,135] width:130 height:20 items:#("") align:#left
 	button btnDelPicture "X" pos:[482,135] width:20 height:20 align:#left
 	--label resolution "" pos:[0,0] witdh:100 height:20 align:#left
-	edittext rootpath "Save pictures to" pos:[300,235] width:170 height:20 enabled:false labelOnTop:true align:#left text:"\\\\nas\\library\\"
+	edittext rootpath "Save pictures to" pos:[300,235] width:170 height:20 enabled:false labelOnTop:true align:#left text: szSaveImagesToPath
 	button btn14 "Select path" pos:[470,252] width:80 height:22 align:#left enabled:false
 	checkbox chk3 "Use RootPath" tooltip:"Path will be 'Path\Pictures'" pos:[460,232] checked:true
+	
+	on T3rollout1 open do
+	(
+		n = useSettings "SAVEIMAGETO" "string" "r"
+		r = FilterString n szGoodChars
+		
+		if(n != "" and n != undefined and r.count == 0) do szSaveImagesToPath = n
+		rootpath.text = szSaveImagesToPath
+	)
+	
+	fn showPreview f =
+	(		
+		if(f == undefined or not doesFileExist f) do return false
+		
+		w = bmpLoader.width
+		h = bmpLoader.height
+		
+		b = bitmapTex filename: f					
+		b2 = bitmap w h			
+		copy b.bitmap b2
+		
+		bmpLoader.bitmap = b2
+		
+		w = b.bitmap.width as string
+		h = b.bitmap.height as string			
+	)
+	
+	fn getOpenImage = 
+	(
+		f = #()
+		
+		imageDialog = dotNetObject "System.Windows.Forms.OpenFileDialog" 
+		imageDialog.title = "Select Pictures"
+		imageDialog.Multiselect = true
+		imageDialog.Filter = "JPG (*.jpg)|*.jpg|PNG (*.png)|*.png|BMP (*.bmp)|*bmp"
+		imageDialog.FilterIndex = 1
+		
+		result = imageDialog.showDialog() 
+		result.ToString() 
+		result.Equals result.OK 
+		result.Equals result.Cancel 
+		
+		f = imageDialog.fileNames 
+		 
+		return f
+	)
+	
+	on btnAddPicture pressed do
+	(
+		f = getOpenImage()
+				
+		if(f.count != 0) do
+		(
+			for i in f do append szPreviewPath i
+						
+			picList.items = for i in szPreviewPath collect filenameFromPath i
+
+			picList.selection = szPreviewPath.count
+
+			showPreview	f[f.count]							
+		)
+	)
+	
+	on picList selected x do
+	(
+		showPreview szPreviewPath[x]
+	)
+	
+	on btnDelPicture pressed do
+	(
+		s = picList.selection
+		
+		bmpLoader.bitmap = bitmap 1 1 color: (color 68 68 68)
+		
+		if(s != 0) do 
+		(
+			deleteItem szPreviewPath s
+			picList.items = for i in szPreviewPath collect filenameFromPath i
+			showPreview	szPreviewPath[1]
+		)		
+	)
+	
+	on chk3 changed s do
+	(
+		rootpath.enabled = not s
+		btn14.enabled = not s
+	)
+	
+	on btn14 pressed do 
+	(
+		
+		f = getSavePath  caption: "Select Path" initialDir: szSaveImagesToPath
+		
+		if(f != undefined) do
+		(
+			p = FilterString f szGoodChars
+			if(p.count > 0) do return messageBox "The paths are not supported by cyrillic characters!\nPlease choose another path!" title: "Warning!"
+			
+			szSaveImagesToPath = f + @"\"
+			rootpath.text = szSaveImagesToPath
+									
+			useSettings "SAVEIMAGETO" szSaveImagesToPath "w"
+		)
+	)
 	
 )
 
 --TAB 4
 rollout T4Rollout1 "" (
 	/* About */
-	/*
-	label 'lbl0' "Library Toolset" offset:[0,50]
-	label 'lbl3' "Version: 0.01a" offset:[0,10]
-	label 'lbl4' "Release date: 19th April 2016" offset:[0,0]
-	label 'lbl6' "UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com" offset:[0,20]
-	label 'lbl7' "Developer: MastaMan" offset:[0,0]
-	label 'lbl8' "---" offset:[0,0]
-	label 'lbl9' "GNU GPL v3.0" offset:[0,0]
-	*/
+	
+	label lbl0 "Library Toolset" offset:[0,50]
+	label lbl3 "Version: "  offset:[0,10]
+	label lbl4 "Release date: 19th April 2016" offset:[0,0]
+	label lbl6 "UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com" offset:[0,20]
+	label lbl7 "Developer: MastaMan" offset:[0,0]
+	label lbl8 "---" offset:[0,0]
+	label lbl9 "GNU GPL v3.0" offset:[0,0]
+	
+	on T4Rollout1 open do
+	(
+		lbl3.caption += szVersion as string
+	)
+	
 )
 
 
@@ -495,6 +637,25 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		return (i + "_" + f[3] + ss + r[2] + "V" + v + "." + f[2])
 	)
 	
+	fn getModelParam n:1 = 
+	(
+		n = n as string
+		
+		i = ID.text
+				
+		f = getControl ("format" + n)		
+		f = f.selected
+		f = findAs gFileFormat f
+		
+		v = getControl ("scn" + n)		
+		v = v.selected
+				
+		r = getControl ("render" + n)
+		r = r.selected
+		
+		return #(i, tolower f[2], v, r)
+	)
+	
 	fn displayModelName n:1 =
 	(
 		f = getControl ("fullname" + n as string)
@@ -605,6 +766,265 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			rootpath.text = szSaveToPath
 									
 			useSettings "SAVETO" szSaveToPath "w"
+		)
+	)
+	
+	-- Save Models
+	fn getDim s =
+	(
+		d = s.max - s.min
+		
+		d = for i in 1 to 3 collect ((d[i] * 100) as integer / 100.0 ) as string
+		
+		return d[1] + " x " + d[2] + " x " + d[3]
+	)
+	
+	fn getCSV f sel:selection =
+	(
+		if(not isSelected()) do return false
+		p = polyCount sel spaces: false
+		v = format1.selected
+		modelParts = for i in sel where isGroupHead i == false collect i
+		m = modelParts.count as string	
+		r = getRender()
+		
+		u = (trimLeft (units.SystemType as string) "#")
+		u[1] = toUpper u[1]
+		
+		d = (getDim sel)
+		s = (round ((getFileSize f) / 1048576.0))  as string
+		
+		m = "\"" + v + "\"," + "\"" + u + "\"," + "\"" + d + "\"," + "\"" + p + "\"," + "\"" + m + "\"," + "\"" + r[2] + "\"," + "\"" + s + "\""
+		
+		return m
+	)
+	
+	fn getFullPath p = 
+	(	
+		if(doesFileExist p) do return p
+		
+		return mapPaths.getFullFilePath (filenameFromPath  p)
+	)
+	
+	-- Fixed !!
+	fn invalidBitmap b = 
+	(	
+		return b == undefined or b.filename == undefined or b.filename == "" or b.filename.count == 0
+	)
+	
+	fn validBitmap b = 
+	(	
+		return b != undefined and b.filename != undefined and b.filename != "" and b.filename.count != 0
+	)
+	
+	global goodTex = #()
+	
+	
+	fn checkTexturesError type: Bitmaptexture =
+	(
+		errorTex = #()
+		oldTex = #()
+				
+		for i in selection where i.material != undefined do
+		(
+			for b in getClassInstances type target:i where b != undefined do
+			(				
+				if(invalidBitmap b and findItem oldTex b == 0) then
+				(										
+					append errorTex #("empty file name path! Map: " + b.name, i.name) 
+					append oldTex b
+				)
+				else if (validBitmap b and doesFileExist (f = getFullPath (b.filename)) == false) then
+				(
+					append errorTex #(b.filename, i.name) 
+				)
+				else
+				(
+					append goodTex #(b, f)
+				)
+			)
+		)
+		
+		return errorTex
+	)
+	
+	fn renameMaterials =
+	(
+		if(not bSetMaterialNames) do return false
+		
+		oldMtl = #()
+		iCnt = 1
+			
+		for i in selection where i.material != undefined and findItem oldMtl i.material == 0 do
+		(			
+			if(findString (i.material.name) szModelID == undefined) do 
+			(
+				i.material.name = szModelID + "_" + (getNum iCnt)
+				
+				if(classOf i.material == Multimaterial) do for ii in 1 to i.material.count where i.material[ii] != undefined do i.material[ii].name = i.material.name + "_" + (getNum ii)
+				
+				append oldMtl i.material
+				
+				iCnt += 1
+			)						
+		)
+	)
+	
+	fn gatherTextures szMaps goodTex = 
+	(
+		for type in BitmapTypes do
+		(
+			oldTex = #()
+			oldTexPaths = #()
+			toRename = #()
+			iCnt = 1
+			
+			if(bTexturesRename) do
+			(
+				for b in goodTex where findItem oldTex b[1] == 0 do
+				(																			
+					f = b[2]
+				
+					n = filenameFromPath f
+					p = getFilenamePath f
+					ext = getFilenameType f
+					
+					n = szModelID + "_" + (getNum iCnt) + ext
+					append oldTex b[1]
+									
+					if(doesFileExist f) do
+					( 
+						ep = findItem oldTexPaths b[2]
+						
+						if(ep != 0) then n = toRename[ep][4]
+						print f
+						append toRename #(b[1], (p + n), (szMaps + n), n, f) 
+					
+						if(ep == 0) do iCnt += 1
+						append oldTexPaths b[2]
+					)												
+				)
+			)
+			
+			for t in toRename do
+			(
+				copyFile t[5] t[3]
+				
+				t[1].filename = t[2]		
+			)
+		)
+	)
+	
+	fn stripTextures szMaps =
+	(		
+		for type in BitmapTypes do
+		(
+			for b in getClassInstances type where (validBitmap b) do b.filename = szMaps + (filenameFromPath b.filename)
+		)		
+	)
+	
+	on SaveModels pressed do
+	(
+		fileToLoad = maxFilePath + maxFileName
+		if(fileToLoad.count < 1) do return messageBox "Please save scene!" title: "Warning!"
+		if(not isSelected()) do return false
+		if(szModelID.count < 1) do return messageBox "Please do STEP 1" title: "Warning!"
+			
+		szDir = szSaveToPath + szModelID + "\\"
+		szMaps = szDir + "maps\\"
+		szExportDir = szDir + "export\\"
+		szMtl = szDir + "matlib\\"
+		szPreview = szDir + "pictures\\"
+		szModels = szDir + "models\\"
+			
+			
+		szScene[1] = theRollout.fullname1.text
+		if(theRollout.fullname2.enabled) do szScene[2] = theRollout.fullname2.text
+		if(theRollout.fullname3.enabled) do szScene[3] = theRollout.fullname3.text
+		
+		szZip = szSaveToPath + "Please wait, pack files.bat"
+		szInfo = szDir + "info.csv"
+		szMatLib = (szMtl + szModelID + "_" + ".mat")			
+			
+		makeDir szDir	
+		makeDir szMaps	
+		makeDir szExportDir	
+		makeDir szPreview	
+		makeDir szMtl	
+		makeDir szModels
+		
+		-- Chek error textures
+		goodTex = #()
+		errorTex = #()
+		
+		t1 = checkTexturesError()
+		t2 = checkTexturesError type: CoronaBitmap
+				
+		join errorTex t1
+		join errorTex t2
+		
+		
+		if (errorTex.count > 0) do
+		(
+			m = "[" + localTime + "] : Error! Not found next textures. Please fix model and try again.\n\n"
+			
+			for er in errorTex do m += "Object: " + er[2] + "\nTexture: " + er[1] + "\n\n"
+			
+			messageBox m title: "Error!"
+			
+			return false
+		)
+		
+		-- Preview
+		iPreview = 0
+		for i in szPreviewPath do
+		(
+			p = getFilenameType i 
+			if(doesFileExist i) do 
+			(
+				iPreview += 1
+				copyFile i (szPreview + "picture" + iPreview as string + p)
+			)
+		)
+		
+		currentRender = renderers.current
+
+		-- Add Versions
+		saveNodes selection (szModels + "_tmp.max") quiet:true
+		resetMaxFile #noPrompt
+		mergeMAXFile (szModels + "_tmp.max") #select #mergedups #renameMtlDups #noRedraw quiet:true			
+		deleteFile (szModels + "_tmp.max")			
+		
+		try(renderers.current = currentRender)catch()
+		
+		select objects
+	
+		if(T1Rollout1.chk1.checked == true) do 
+		(
+			layer0 = LayerManager.getLayer 0
+			for i in objects do layer0.addNode i
+		)
+		
+		-- OBJECT RENAMER HERE
+		-- MATERIAL RENAMER HERE
+		-- MAPS RENAMER HERE
+			
+		--goodTex = makeUniqueArray goodTex
+		
+		--gatherTextures szMaps goodTex
+		
+		--stripTextures szMaps
+		
+		--renameMaterials()
+		
+		-- Fix selection in 3Ds Max 2016		
+		for ii in 1 to szScene.count do 
+		(
+			p = theRollout.getModelParam n:ii
+			if(p[2] == "max") do
+			(				
+				saveNodes objects (szModels + szScene[ii]) saveAsVersion:(p[3] as integer) quiet:true
+			)
 		)
 	)
 )
