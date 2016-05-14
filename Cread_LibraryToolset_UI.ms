@@ -149,6 +149,7 @@ fn polyCount s spaces: true =
 
 --TAB 1
 
+
 rollout T1Rollout1 "OBJECTS"(
 	
 	dropdownList rnObjsMode "" pos:[110,25] width:100 height:40 items:#("Replace with","Add prefix","Add suffix") align:#left
@@ -158,6 +159,55 @@ rollout T1Rollout1 "OBJECTS"(
 	edittext rnObjsPrevName "Objects name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
 	checkbox chk1 "Clean layers" tooltip:"Move all objects to 0 (default) layer and remove all layers" pos:[110,55] checked:true
 
+	fn renamerObjects realName num =
+	(
+		m = rnObjsMode.selection
+		t = rnObjsType.selection
+		c = rnObjsCustom.text
+		p = rnObjsPadding.selected.count
+		fullName = getFilenameFile (theRollout.fullname1.text)
+		idName = theRollout.ID.text
+			
+		n = case t of 
+		(			
+			2: fullName
+			3: c
+			default: idName
+		)
+			
+		o = case m of
+		(
+			2: n + "_" + realName
+			3: realName + "_" + n 
+			default: n
+		)
+		
+		return o + "_" + (getNum num c:p)
+	)
+	
+	fn startRenameObjects = 
+	(
+		g = geometry
+				
+		for i in 1 to g.count where isValidNode g[i] do
+		(
+			g[i].name = renamerObjects (g[i].name) i
+		)
+	)
+	
+	on rnObjsType selected a do
+	(	
+		rnObjsCustom.enabled = if(a == 3) then true else false
+				
+		rnObjsPrevName.text = renamerObjects "obj" 1
+	)
+	
+	on rnObjsMode selected a do rnObjsPrevName.text = renamerObjects "obj" 1
+	
+	on rnObjsPadding selected a do rnObjsPrevName.text = renamerObjects "obj" 1
+		
+	on rnObjsCustom changed a do rnObjsPrevName.text = renamerObjects "obj" 1
+		
 )
 
 rollout T1rollout2 "MATERIALS" (
@@ -167,6 +217,65 @@ rollout T1rollout2 "MATERIALS" (
 	edittext rnMatsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnMatsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
 	edittext rnMatsPrevName "Materials name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
+
+	fn renamerMaterials realName num =
+	(
+		m = rnMatsMode.selection
+		t = rnMatsType.selection
+		c = rnMatsCustom.text
+		p = rnMatsPadding.selected.count
+		fullName = getFilenameFile (theRollout.fullname1.text)
+		idName = theRollout.ID.text
+			
+		n = case t of 
+		(			
+			2: fullName
+			3: c
+			default: idName
+		)
+			
+		o = case m of
+		(
+			2: n + "_" + realName
+			3: realName + "_" + n 
+			default: n
+		)
+		
+		return o + "_" + (getNum num c:p)
+	)
+	
+	fn startRenameMaterials = 
+	(
+		oldMtl = #()
+		iCnt = 1
+		p = rnMatsPadding.selected.count
+		
+		for i in selection where i.material != undefined and findItem oldMtl i.material == 0 do
+		(
+			-- May be chek dub name
+			n = i.material.name
+			i.material.name = renamerMaterials n iCnt
+			
+			if(classOf i.material == Multimaterial) do for ii in 1 to i.material.count where i.material[ii] != undefined do i.material[ii].name = i.material.name + "_" + (getNum ii c:p)
+			
+			append oldMtl i.material
+			
+			iCnt += 1		
+		)				
+	)
+		
+	on rnMatsType selected a do
+	(
+		rnMatsCustom.enabled = if(a == 3) then true else false
+		
+		rnMatsPrevName.text = renamerMaterials "mat" 1
+	)
+		
+	on rnMatsMode selected a do rnMatsPrevName.text = renamerMaterials "mat" 1
+	
+	on rnMatsPadding selected a do rnMatsPrevName.text = renamerMaterials "mat" 1
+		
+	on rnMatsCustom changed a do rnMatsPrevName.text = renamerMaterials "mat" 1
 
 )
 
@@ -179,7 +288,17 @@ rollout T1rollout3 "MAPS" (
 	edittext rnMapsPrevName "Maps name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
 	checkbox chk3 "Set Assets Path" tooltip:"Set assets path to RootPath + ID Name" pos:[110,55] checked:true
 	
+	
+	on rnMapsType selected a do
+	(
+		enable = false
+		if(a == 3) do enable = true
+		
+		rnMapsCustom.enabled = enable
+	)
 )
+
+
 
 --TAB 2
 rollout T2Rollout1 "Geometry" (
@@ -195,6 +314,8 @@ rollout T2Rollout1 "Geometry" (
 	
 	button btnCenterGeo "Center in Scene" pos:[450,40] width:100 height:34 align:#left
 	
+	
+	-- TAB 2
 	fn ungroupRecursive s = for i in s where isGroupHead i and isValidNode i do explodeGroup i
 	
 	fn setPivot p =
@@ -1008,10 +1129,16 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		-- OBJECT RENAMER HERE
 		-- MATERIAL RENAMER HERE
 		-- MAPS RENAMER HERE
-			
-		--goodTex = makeUniqueArray goodTex
 		
-		--gatherTextures szMaps goodTex
+
+		T1Rollout1.startRenameObjects()
+		T1Rollout2.startRenameMaterials()
+		
+		return false
+		
+		goodTex = makeUniqueArray goodTex
+		
+		gatherTextures szMaps goodTex
 		
 		--stripTextures szMaps
 		
