@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "0.0.3"
+global szVersion = "1.0.0"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -27,6 +27,7 @@ global szModelID = "1308"
 global szPreviewPath = #()
 global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
 global szScene = #()
+global theRollout
 
 /* GLOBAL FUNCTIONS */
 
@@ -146,6 +147,36 @@ fn polyCount s spaces: true =
 
 	return (trimLeft r " ")
 )
+
+fn invalidBitmap b = 
+(	
+	return b == undefined or b.filename == undefined or b.filename == "" or b.filename.count == 0
+)
+
+fn validBitmap b = 
+(	
+	return b != undefined and b.filename != undefined and b.filename != "" and b.filename.count != 0
+)
+
+fn getFullPath p = 
+(	
+	if(doesFileExist p) do return p
+	
+	return mapPaths.getFullFilePath (filenameFromPath  p)
+)
+
+fn round n = ((n * 100) as integer) / 100.0
+
+fn writeFile f s =
+(
+	f = openFile f mode: "wt"
+
+	format(s as string) to:f
+
+	flush f
+	close f
+)
+
 
 --TAB 1
 
@@ -320,7 +351,56 @@ rollout T1rollout3 "MAPS" (
 		
 		rnMapsPrevName.text = renamerMaps "map" 1
 	)
-		
+	
+	fn startRenameAndCopyMaps szMaps = 
+	(
+		for type in BitmapTypes do
+		(
+			oldTex = #()
+			oldTexPaths = #()
+			toRename = #()
+			iCnt = 1
+			
+			for type in BitmapTypes do for b in getClassInstances type where (validBitmap b) and findItem oldTex b == 0 do
+			(																	
+				f = getFullPath (b.filename)
+			
+				n = filenameFromPath f
+				p = getFilenamePath f
+				ext = getFilenameType f
+							
+				n = (renamerMaps n iCnt) + ext
+												
+				if(doesFileExist f) do
+				( 
+					ep = findItem oldTexPaths b
+					
+					if(ep != 0) then n = toRename[ep][4]
+					
+					append toRename #(b, (p + n), (szMaps + n), f) 
+			
+					if(ep == 0) do iCnt += 1
+					append oldTexPaths b
+				)												
+			)
+						
+			for t in toRename do
+			(
+				t[1].filename = t[2]
+				
+				copyFile t[4] t[3]										
+			)
+		)			
+	)
+	
+	fn libAssetsPath szMaps =
+	(		
+		for type in BitmapTypes do
+		(
+			for b in getClassInstances type where (validBitmap b) do b.filename = szMaps + (filenameFromPath b.filename)
+		)	
+	)
+	
 	on rnMapsMode selected a do rnMapsPrevName.text = renamerMaps "map" 1
 	
 	on rnMapsPadding selected a do rnMapsPrevName.text = renamerMaps "map" 1
@@ -804,7 +884,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		r = getControl ("render" + n)
 		r = r.selected
 		
-		return #(i, tolower f[2], v, r)
+		return #(i, tolower f[2], v, r) -- ID, format, version, render
 	)
 	
 	fn displayModelName n:1 =
@@ -930,18 +1010,15 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		return d[1] + " x " + d[2] + " x " + d[3]
 	)
 	
-	fn getCSV f sel:selection =
+	fn getCSV f v sel:geometry =
 	(
 		if(not isSelected()) do return false
 		p = polyCount sel spaces: false
-		v = format1.selected
 		modelParts = for i in sel where isGroupHead i == false collect i
 		m = modelParts.count as string	
 		r = getRender()
-		
 		u = (trimLeft (units.SystemType as string) "#")
 		u[1] = toUpper u[1]
-		
 		d = (getDim sel)
 		s = (round ((getFileSize f) / 1048576.0))  as string
 		
@@ -950,26 +1027,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		return m
 	)
 	
-	fn getFullPath p = 
-	(	
-		if(doesFileExist p) do return p
-		
-		return mapPaths.getFullFilePath (filenameFromPath  p)
-	)
-	
 	-- Fixed !!
-	fn invalidBitmap b = 
-	(	
-		return b == undefined or b.filename == undefined or b.filename == "" or b.filename.count == 0
-	)
-	
-	fn validBitmap b = 
-	(	
-		return b != undefined and b.filename != undefined and b.filename != "" and b.filename.count != 0
-	)
-	
-	global goodTex = #()
-	
 	
 	fn checkTexturesError type: Bitmaptexture =
 	(
@@ -985,13 +1043,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 					append errorTex #("empty file name path! Map: " + b.name, i.name) 
 					append oldTex b
 				)
-				else if (validBitmap b and doesFileExist (f = getFullPath (b.filename)) == false) then
+				else if (validBitmap b and doesFileExist (getFullPath (b.filename)) == false) then
 				(
 					append errorTex #(b.filename, i.name) 
-				)
-				else
-				(
-					append goodTex #(b, f)
 				)
 			)
 		)
@@ -999,79 +1053,11 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		return errorTex
 	)
 	
-	fn renameMaterials =
+	fn saveMtlLib p =
 	(
-		if(not bSetMaterialNames) do return false
-		
-		oldMtl = #()
-		iCnt = 1
-			
-		for i in selection where i.material != undefined and findItem oldMtl i.material == 0 do
-		(			
-			if(findString (i.material.name) szModelID == undefined) do 
-			(
-				i.material.name = szModelID + "_" + (getNum iCnt)
-				
-				if(classOf i.material == Multimaterial) do for ii in 1 to i.material.count where i.material[ii] != undefined do i.material[ii].name = i.material.name + "_" + (getNum ii)
-				
-				append oldMtl i.material
-				
-				iCnt += 1
-			)						
-		)
-	)
-	
-	fn gatherTextures szMaps goodTex = 
-	(
-		for type in BitmapTypes do
-		(
-			oldTex = #()
-			oldTexPaths = #()
-			toRename = #()
-			iCnt = 1
-			
-			if(bTexturesRename) do
-			(
-				for b in goodTex where findItem oldTex b[1] == 0 do
-				(																			
-					f = b[2]
-				
-					n = filenameFromPath f
-					p = getFilenamePath f
-					ext = getFilenameType f
-					
-					n = szModelID + "_" + (getNum iCnt) + ext
-					append oldTex b[1]
-									
-					if(doesFileExist f) do
-					( 
-						ep = findItem oldTexPaths b[2]
-						
-						if(ep != 0) then n = toRename[ep][4]
-						print f
-						append toRename #(b[1], (p + n), (szMaps + n), n, f) 
-					
-						if(ep == 0) do iCnt += 1
-						append oldTexPaths b[2]
-					)												
-				)
-			)
-			
-			for t in toRename do
-			(
-				copyFile t[5] t[3]
-				
-				t[1].filename = t[2]		
-			)
-		)
-	)
-	
-	fn stripTextures szMaps =
-	(		
-		for type in BitmapTypes do
-		(
-			for b in getClassInstances type where (validBitmap b) do b.filename = szMaps + (filenameFromPath b.filename)
-		)		
+		for i in 1 to currentMaterialLibrary.count do deleteItem currentMaterialLibrary 1
+		for i in geometry where i.material != undefined do append currentMaterialLibrary i.material
+		saveMaterialLibrary p
 	)
 	
 	on SaveModels pressed do
@@ -1095,7 +1081,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		
 		szZip = szSaveToPath + "Please wait, pack files.bat"
 		szInfo = szDir + "info.csv"
-		szMatLib = (szMtl + szModelID + "_" + ".mat")			
+		szMatLib = (szMtl + szModelID + ".mat")			
 			
 		makeDir szDir	
 		makeDir szMaps	
@@ -1105,7 +1091,6 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		makeDir szModels
 		
 		-- Chek error textures
-		goodTex = #()
 		errorTex = #()
 		
 		t1 = checkTexturesError()
@@ -1150,39 +1135,63 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		
 		select objects
 	
+		-- Remove layers
 		if(T1Rollout1.chk1.checked == true) do 
 		(
 			layer0 = LayerManager.getLayer 0
 			for i in objects do layer0.addNode i
 		)
+	
 		
-		-- OBJECT RENAMER HERE
-		-- MATERIAL RENAMER HERE
-		-- MAPS RENAMER HERE
-		
-
 		T1Rollout1.startRenameObjects()
 		T1Rollout2.startRenameMaterials()
+		T1Rollout3.startRenameAndCopyMaps szMaps
 		
-		return false
+		if(T1Rollout3.chk3.checked == true) do 
+		(
+			T1Rollout3.libAssetsPath szMaps
+		)
 		
-		goodTex = makeUniqueArray goodTex
-		
-		gatherTextures szMaps goodTex
-		
-		--stripTextures szMaps
-		
-		--renameMaterials()
-		
+		savedMax = #()
 		-- Fix selection in 3Ds Max 2016		
 		for ii in 1 to szScene.count do 
 		(
 			p = theRollout.getModelParam n:ii
-			if(p[2] == "max") do
-			(				
-				saveNodes objects (szModels + szScene[ii]) saveAsVersion:(p[3] as integer) quiet:true
+			
+			case p[2] of
+			(
+				"max":
+				(
+					f = (szModels + szScene[ii])
+					saveNodes objects f saveAsVersion:(p[3] as integer) quiet:true
+					savedMax[1] = f				
+					savedMax[2] = p[3]
+				)
+				default: 
+				(
+					f = (szExportDir + szScene[ii]) 
+					FBXExporterSetParam "FileVersion" "FBX201200"	-- Warning!! This option important!!
+					exportFile f #noPrompt  --selectedOnly:true
+				)				
 			)
 		)
+		
+		-- Add matlib
+		saveMtlLib szMatLib
+		
+		if(savedMax[1] != undefined) do
+		(
+			l = getCSV savedMax[1]	savedMax[2]		
+			writeFile szInfo l
+		)
+		
+		resetMaxFile #noPrompt
+		loadMaxFile fileToLoad useFileUnits: true quiet:true
+		
+		successMessage = "Model " + szModelID + " prepared!\n\nPress OK for open directory with model." 
+		q = queryBox successMessage beep: false title: "Success!"
+			
+		if(q) do shellLaunch szDir ""	
 	)
 )
 createDialog theRollout 610 680
