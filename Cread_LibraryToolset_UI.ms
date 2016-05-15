@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "0.0.2"
+global szVersion = "0.0.3"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -263,7 +263,7 @@ rollout T1rollout2 "MATERIALS" (
 			iCnt += 1		
 		)				
 	)
-		
+	
 	on rnMatsType selected a do
 	(
 		rnMatsCustom.enabled = if(a == 3) then true else false
@@ -288,14 +288,44 @@ rollout T1rollout3 "MAPS" (
 	edittext rnMapsPrevName "Maps name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
 	checkbox chk3 "Set Assets Path" tooltip:"Set assets path to RootPath + ID Name" pos:[110,55] checked:true
 	
+	fn renamerMaps realName num =
+	(
+		m = rnMapsMode.selection
+		t = rnMapsType.selection
+		c = rnMapsCustom.text
+		p = rnMapsPadding.selected.count
+		fullName = getFilenameFile (theRollout.fullname1.text)
+		idName = theRollout.ID.text
+			
+		n = case t of 
+		(			
+			2: fullName
+			3: c
+			default: idName
+		)
+			
+		o = case m of
+		(
+			2: n + "_" + realName
+			3: realName + "_" + n 
+			default: n
+		)
+		
+		return o + "_" + (getNum num c:p)
+	)
 	
 	on rnMapsType selected a do
-	(
-		enable = false
-		if(a == 3) do enable = true
+	( 
+		rnMapsCustom.enabled = if(a == 3) then true else false
 		
-		rnMapsCustom.enabled = enable
+		rnMapsPrevName.text = renamerMaps "map" 1
 	)
+		
+	on rnMapsMode selected a do rnMapsPrevName.text = renamerMaps "map" 1
+	
+	on rnMapsPadding selected a do rnMapsPrevName.text = renamerMaps "map" 1
+		
+	on rnMapsCustom changed a do rnMapsPrevName.text = renamerMaps "map" 1
 )
 
 
