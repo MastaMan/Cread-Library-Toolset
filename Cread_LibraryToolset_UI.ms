@@ -354,14 +354,14 @@ rollout T1rollout3 "MAPS" (
 	
 	fn startRenameAndCopyMaps szMaps = 
 	(
-		for type in BitmapTypes do
+		for type in BitmapTypes where classOf type == textureMap do
 		(
 			oldTex = #()
 			oldTexPaths = #()
 			toRename = #()
 			iCnt = 1
 			
-			for type in BitmapTypes do for b in getClassInstances type where (validBitmap b) and findItem oldTex b == 0 do
+			for type in BitmapTypes where classOf type == textureMap do for b in getClassInstances type where (validBitmap b) and findItem oldTex b == 0 do
 			(																	
 				f = getFullPath (b.filename)
 			
@@ -395,7 +395,7 @@ rollout T1rollout3 "MAPS" (
 	
 	fn libAssetsPath szMaps =
 	(		
-		for type in BitmapTypes do
+		for type in BitmapTypes where classOf type == textureMap do
 		(
 			for b in getClassInstances type where (validBitmap b) do b.filename = szMaps + (filenameFromPath b.filename)
 		)	
@@ -923,6 +923,10 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		displayModelName n:2
 		displayModelName n:3
 		
+		T1Rollout1.rnObjsPrevName.text = T1Rollout1.renamerObjects "obj" 1
+		T1rollout2.rnMatsPrevName.text = T1rollout2.renamerMaterials "mat" 1
+		T1rollout3.rnMapsPrevName.text = T1rollout3.renamerMaps "map" 1
+		
 		szModelID = ID.text
 	)
 	
@@ -1069,8 +1073,6 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			
 		szDir = szSaveToPath + szModelID + "\\"
 		szMaps = szDir + "maps\\"
-		szExportDir = szDir + "export\\"
-		szMtl = szDir + "matlib\\"
 		szPreview = szDir + "pictures\\"
 		szModels = szDir + "models\\"
 			
@@ -1081,13 +1083,10 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		
 		szZip = szSaveToPath + "Please wait, pack files.bat"
 		szInfo = szDir + "info.csv"
-		szMatLib = (szMtl + szModelID + ".mat")			
-			
+					
 		makeDir szDir	
 		makeDir szMaps	
-		makeDir szExportDir	
 		makeDir szPreview	
-		makeDir szMtl	
 		makeDir szModels
 		
 		-- Chek error textures
@@ -1169,7 +1168,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 				)
 				default: 
 				(
-					f = (szExportDir + szScene[ii]) 
+					f = (szModels + szScene[ii]) 
 					FBXExporterSetParam "FileVersion" "FBX201200"	-- Warning!! This option important!!
 					exportFile f #noPrompt  --selectedOnly:true
 				)				
@@ -1177,7 +1176,8 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		)
 		
 		-- Add matlib
-		saveMtlLib szMatLib
+		--saveMtlLib szMatLib
+		
 		
 		if(savedMax[1] != undefined) do
 		(
