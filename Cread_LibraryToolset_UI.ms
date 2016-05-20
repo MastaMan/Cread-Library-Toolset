@@ -25,7 +25,7 @@ global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
 global szModelID = "1308"
 global szPreviewPath = #()
-global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
+global BitmapTypes = #(Bitmaptexture)
 global szScene = #()
 global theRollout
 
@@ -61,6 +61,12 @@ fn getRender =
 	if matchpattern r pattern:"*maxwell*" do return #("_maxwell", "Maxwell")
 		
 	return #("", "")
+)
+
+fn findRenderer f =
+(	
+	o = for r in RendererClass.classes where matchPattern (r as string) pattern: ("*" + f + "*") collect r
+	return o.count > 0
 )
 
 fn getNum n c:2 =
@@ -915,6 +921,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		if(n != "" and n != undefined and r.count == 0) do szSaveToPath = n
 			
 		rootpath.text = szSaveToPath
+		
+		-- Add CoronaBitmap if Corona Renderer installed
+		if(findRenderer "corona") do append BitmapTypes CoronaBitmap
 	)
 
 	on ID changed a do
