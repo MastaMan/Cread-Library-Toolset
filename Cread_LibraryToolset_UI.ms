@@ -25,7 +25,7 @@ global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
 global szModelID = "1308"
 global szPreviewPath = #()
-global BitmapTypes = #(Bitmaptexture)
+global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
 global szScene = #()
 global theRollout
 
@@ -360,43 +360,46 @@ rollout T1rollout3 "MAPS" (
 	
 	fn startRenameAndCopyMaps szMaps = 
 	(
-		for type in BitmapTypes where classOf type == textureMap do
+		oldTex = #()
+		oldTexPaths = #()
+		toRename = #()
+		iCnt = 1
+		
+		for i in selection where i.material != undefined do
 		(
-			oldTex = #()
-			oldTexPaths = #()
-			toRename = #()
-			iCnt = 1
-			
-			for type in BitmapTypes where classOf type == textureMap do for b in getClassInstances type where (validBitmap b) and findItem oldTex b == 0 do
-			(																	
-				f = getFullPath (b.filename)
-			
-				n = filenameFromPath f
-				p = getFilenamePath f
-				ext = getFilenameType f
-							
-				n = (renamerMaps n iCnt) + ext
-												
-				if(doesFileExist f) do
-				( 
-					ep = findItem oldTexPaths b
-					
-					if(ep != 0) then n = toRename[ep][4]
-					
-					append toRename #(b, (p + n), (szMaps + n), f) 
-			
-					if(ep == 0) do iCnt += 1
-					append oldTexPaths b
-				)												
-			)
-						
-			for t in toRename do
-			(
-				t[1].filename = t[2]
+			for type in BitmapTypes where classOf type == textureMap do 
+			(	
+				for b in getClassInstances type target:i where (validBitmap b) and findItem oldTex b == 0 do
+				(																	
+					f = getFullPath (b.filename)
 				
-				copyFile t[4] t[3]										
+					n = filenameFromPath f
+					p = getFilenamePath f
+					ext = getFilenameType f
+							
+					n = (renamerMaps n iCnt) + ext
+											
+					if(doesFileExist f) do
+					( 
+						ep = findItem oldTexPaths b
+						
+						if(ep != 0) then n = toRename[ep][4]
+						
+						append toRename #(b, (p + n), (szMaps + n), f) 
+				
+						if(ep == 0) do iCnt += 1
+						append oldTexPaths b
+					)												
+				)
 			)
-		)			
+		)
+							
+		for t in toRename do
+		(
+			t[1].filename = t[2]
+			
+			copyFile t[4] t[3]										
+		)
 	)
 	
 	fn libAssetsPath szMaps =
@@ -404,7 +407,7 @@ rollout T1rollout3 "MAPS" (
 		for type in BitmapTypes where classOf type == textureMap do
 		(
 			for b in getClassInstances type where (validBitmap b) do b.filename = szMaps + (filenameFromPath b.filename)
-		)	
+		)
 	)
 	
 	on rnMapsMode selected a do rnMapsPrevName.text = renamerMaps "map" 1
@@ -923,7 +926,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		rootpath.text = szSaveToPath
 		
 		-- Add CoronaBitmap if Corona Renderer installed
-		if(findRenderer "corona") do append BitmapTypes CoronaBitmap
+		--if(findRenderer "corona") do append BitmapTypes CoronaBitmap
 	)
 
 	on ID changed a do
@@ -1042,23 +1045,26 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 	
 	-- Fixed !!
 	
-	fn checkTexturesError type: Bitmaptexture =
+	fn checkTexturesError =
 	(
 		errorTex = #()
 		oldTex = #()
 				
 		for i in selection where i.material != undefined do
 		(
-			for b in getClassInstances type target:i where b != undefined do
-			(				
-				if(invalidBitmap b and findItem oldTex b == 0) then
-				(										
-					append errorTex #("empty file name path! Map: " + b.name, i.name) 
-					append oldTex b
-				)
-				else if (validBitmap b and doesFileExist (getFullPath (b.filename)) == false) then
-				(
-					append errorTex #(b.filename, i.name) 
+			for type in BitmapTypes where classOf type == textureMap do
+			(
+				for b in getClassInstances type target:i where b != undefined do
+				(				
+					if(invalidBitmap b and findItem oldTex b == 0) then
+					(										
+						append errorTex #("empty file name path! Map: " + b.name, i.name) 
+						append oldTex b
+					)
+					else if (validBitmap b and doesFileExist (getFullPath (b.filename)) == false) then
+					(
+						append errorTex #(b.filename, i.name) 
+					)
 				)
 			)
 		)
@@ -1099,13 +1105,8 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		makeDir szModels
 		
 		-- Chek error textures
-		errorTex = #()
-		
-		t1 = checkTexturesError()
-		t2 = checkTexturesError type: CoronaBitmap
-				
-		join errorTex t1
-		join errorTex t2
+		errorTex = #()	
+		errorTex = checkTexturesError()
 		
 		
 		if (errorTex.count > 0) do
@@ -1133,11 +1134,21 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		
 		currentRender = renderers.current
 
+		T1Rollout3.startRenameAndCopyMaps szMaps
+		
+		if(T1Rollout3.chk3.checked == true) do 
+		(
+			T1Rollout3.libAssetsPath szMaps
+		)
+		
+		T1Rollout1.startRenameObjects()
+		T1Rollout2.startRenameMaterials()
+		
 		-- Add Versions
 		saveNodes selection (szModels + "_tmp.max") quiet:true
 		resetMaxFile #noPrompt
 		mergeMAXFile (szModels + "_tmp.max") #select #mergedups #renameMtlDups #noRedraw quiet:true			
-		deleteFile (szModels + "_tmp.max")			
+		deleteFile (szModels + "_tmp.max")
 		
 		try(renderers.current = currentRender)catch()
 		
@@ -1150,16 +1161,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			for i in objects do layer0.addNode i
 		)
 	
-		
-		T1Rollout1.startRenameObjects()
-		T1Rollout2.startRenameMaterials()
-		T1Rollout3.startRenameAndCopyMaps szMaps
-		
-		if(T1Rollout3.chk3.checked == true) do 
-		(
-			T1Rollout3.libAssetsPath szMaps
-		)
-		
+
+
+			
 		savedMax = #()
 		-- Fix selection in 3Ds Max 2016		
 		for ii in 1 to szScene.count do 
@@ -1183,10 +1187,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 				)				
 			)
 		)
-		
-		-- Add matlib
-		--saveMtlLib szMatLib
-		
+				
 		
 		if(savedMax[1] != undefined) do
 		(
