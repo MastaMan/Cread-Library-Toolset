@@ -28,6 +28,8 @@ global szPreviewPath = #()
 global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
 global szScene = #()
 global theRollout
+global szModelVerison = "01"
+
 
 /* GLOBAL FUNCTIONS */
 
@@ -193,7 +195,7 @@ rollout T1Rollout1 "OBJECTS"(
 	dropdownList rnObjsType "" pos:[215,25] width:70 height:40 enabled:true items:#("ID Name", "Full name", "Custom") align:#left
 	edittext rnObjsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnObjsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
-	edittext rnObjsPrevName "Objects name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
+	edittext rnObjsPrevName "Objects name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001V01"
 	checkbox chk1 "Clean layers" tooltip:"Move all objects to 0 (default) layer and remove all layers" pos:[110,55] checked:true
 
 	fn renamerObjects realName num =
@@ -219,7 +221,7 @@ rollout T1Rollout1 "OBJECTS"(
 			default: n
 		)
 		
-		return o + "_" + (getNum num c:p)
+		return o + "_" + (getNum num c:p) + "V" + szModelVerison
 	)
 	
 	fn startRenameObjects = 
@@ -253,7 +255,7 @@ rollout T1rollout2 "MATERIALS" (
 	dropdownList rnMatsType "" pos:[215,25] width:70 height:40 enabled:true items:#("ID Name", "Full Name", "Custom") align:#left
 	edittext rnMatsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnMatsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
-	edittext rnMatsPrevName "Materials name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
+	edittext rnMatsPrevName "Materials name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001V01"
 
 	fn renamerMaterials realName num =
 	(
@@ -278,7 +280,7 @@ rollout T1rollout2 "MATERIALS" (
 			default: n
 		)
 		
-		return o + "_" + (getNum num c:p)
+		return o + "_" + (getNum num c:p) + "V" + szModelVerison
 	)
 	
 	fn startRenameMaterials = 
@@ -286,7 +288,7 @@ rollout T1rollout2 "MATERIALS" (
 		oldMtl = #()
 		iCnt = 1
 		p = rnMatsPadding.selected.count
-		
+		/*
 		for i in selection where i.material != undefined and findItem oldMtl i.material == 0 do
 		(
 			-- May be chek dub name
@@ -298,7 +300,20 @@ rollout T1rollout2 "MATERIALS" (
 			append oldMtl i.material
 			
 			iCnt += 1		
-		)				
+		)*/
+
+		for i in material.classes where i != undefined do
+		(
+			for ii in getClassInstances i do 
+			(	
+				n = refs.dependentNodes ii
+				if(n.count > 0) do
+				(
+					ii.name = renamerMaterials szModelID iCnt
+					iCnt += 1
+				)
+			)
+		)		
 	)
 	
 	on rnMatsType selected a do
@@ -322,7 +337,7 @@ rollout T1rollout3 "MAPS" (
 	dropdownList rnMapsType "" pos:[215,25] width:70 height:40 enabled:true items:#("ID Name", "Full Name", "Custom") align:#left
 	edittext rnMapsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnMapsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
-	edittext rnMapsPrevName "Maps name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001"
+	edittext rnMapsPrevName "Maps name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001V01"
 	checkbox chk3 "Set Assets Path" tooltip:"Set assets path to RootPath + ID Name" pos:[110,55] checked:true
 	
 	fn renamerMaps realName num =
@@ -348,7 +363,7 @@ rollout T1rollout3 "MAPS" (
 			default: n
 		)
 		
-		return o + "_" + (getNum num c:p)
+		return o + "_" + (getNum num c:p) + "V" + szModelVerison
 	)
 	
 	on rnMapsType selected a do
@@ -381,14 +396,15 @@ rollout T1rollout3 "MAPS" (
 											
 					if(doesFileExist f) do
 					( 
-						ep = findItem oldTexPaths b
+						ep = findItem oldTexPaths b.filename
 						
 						if(ep != 0) then n = toRename[ep][4]
 						
+						append oldTex b
 						append toRename #(b, (p + n), (szMaps + n), f) 
 				
 						if(ep == 0) do iCnt += 1
-						append oldTexPaths b
+						append oldTexPaths b.filename
 					)												
 				)
 			)
@@ -664,17 +680,13 @@ rollout theRollout "Library Toolset" --height:400
 	dropdownList format2 "" pos:[130,84] width:100 height:40 items:#("3D Studio Max","FBX","OBJ") align:#left enabled:false
 	dropdownList scn2 "" pos:[235,84] width:70 height:40 enabled:false items:#("2013", "2014", "2015","2016") align:#left 
 	dropdownList render2 "" pos:[310,84] width:70 height:40 enabled:false items:#("none","VRay", "Corona", "Maxwell") align:#left
-	edittext version2 "" pos:[386,84] width:34 height:20 enabled:false labelOnTop:true align:#left text:"01"
-	button version2add "+" pos:[426,84] width:20 height:20 align:#left enabled:false
 	edittext fullname2 "" pos:[460,84] width:130 height:20 enabled:false labelOnTop:true align:#left readonly:true text:"0000_000000V01.ext"
 	
 	-- format3
 	checkbox chk3 "" pos:[110,111] height:20
 	dropdownList format3 "" pos:[130,110] width:100 height:40 items:#("3D Studio Max","FBX","OBJ") align:#left enabled:false
 	dropdownList scn3 "" pos:[235,110] width:70 height:40 enabled:false items:#("2013", "2014", "2015","2016") align:#left
-	dropdownList render3 "" pos:[310,110] width:70 height:40 enabled:false items:#("none","VRay", "Corona", "Maxwell") align:#left
-	edittext version3 "" pos:[386,110] width:34 height:20 enabled:false labelOnTop:true align:#left text:"01"
-	button version3add "+" pos:[426,110] width:20 height:20 align:#left enabled:false
+	dropdownList render3 "" pos:[310,110] width:70 height:40 enabled:false items:#("none","VRay", "Corona", "Maxwell") align:#left		
 	edittext fullname3 "" pos:[460,110] width:130 height:20 enabled:false labelOnTop:true align:#left readonly:true text:"0000_000000V01.ext"
 	
 	
@@ -871,7 +883,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		r = r.selected
 		r = findAs gRenderVersion r
 		
-		v = getControl ("version" + n)
+		v = getControl ("version1")
 		v = v.text
 		
 		return (i + "_" + f[3] + ss + r[2] + "V" + v + "." + f[2])
@@ -945,47 +957,44 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 	on format1 selected a do displayModelName n:1
 	on scn1 selected a do displayModelName n:1
 	on render1 selected a do displayModelName n:1
-	on version1 changed t do displayModelName n:1
+	on version1 changed t do 
+	(
+		szModelVerison = version1.text
+		
+		displayModelName n:1
+		displayModelName n:2
+		displayModelName n:3				
+	)
 	on version1add pressed do
 	(
 		v = (version1.text as integer) + 1
 		
 		version1.text = getNum v
 		
+		szModelVerison = version1.text
+		
 		displayModelName n:1
+		displayModelName n:2
+		displayModelName n:3
+		
+			
+		T1Rollout1.rnObjsPrevName.text = T1Rollout1.renamerObjects "obj" 1
+		T1rollout2.rnMatsPrevName.text = T1rollout2.renamerMaterials "mat" 1
+		T1rollout3.rnMapsPrevName.text = T1rollout3.renamerMaps "map" 1
 	)
 	on format2 selected a do displayModelName n:2
 	on scn2 selected a do displayModelName n:2
 	on render2 selected a do displayModelName n:2
-	on version2 changed t do displayModelName n:2
-	on version2add pressed do
-	(
-		v = (version2.text as integer) + 1
-		
-		version2.text = getNum v
-		
-		displayModelName n:2
-	)
 	on format3 selected a do displayModelName n:3
 	on scn3 selected a do displayModelName n:3
 	on render3 selected a do displayModelName n:3
-	on version3 changed t do displayModelName n:3
-	on version3add pressed do
-	(
-		v = (version3.text as integer) + 1
 		
-		version3.text = getNum v
-		
-		displayModelName n:3
-	)
 
 	on chk2 changed s do
 	(
 		format2.enabled = s
 		scn2.enabled = s
-		render2.enabled = s
-		version2.enabled = s
-		version2add.enabled = s
+		render2.enabled = s		
 		fullname2.enabled = s
 	)
 	
@@ -994,8 +1003,6 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		format3.enabled = s
 		scn3.enabled = s
 		render3.enabled = s
-		version3.enabled = s
-		version3add.enabled = s
 		fullname3.enabled = s
 	)
 	
@@ -1140,9 +1147,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		(
 			T1Rollout3.libAssetsPath szMaps
 		)
-		
-		T1Rollout1.startRenameObjects()
-		T1Rollout2.startRenameMaterials()
+			
 		
 		-- Add Versions
 		saveNodes selection (szModels + "_tmp.max") quiet:true
@@ -1153,6 +1158,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		try(renderers.current = currentRender)catch()
 		
 		select objects
+		
+		T1Rollout1.startRenameObjects()
+		T1Rollout2.startRenameMaterials()
 	
 		-- Remove layers
 		if(T1Rollout1.chk1.checked == true) do 
