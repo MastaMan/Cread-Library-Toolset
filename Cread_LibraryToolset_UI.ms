@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.1"
+global szVersion = "1.0.2"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -186,6 +186,25 @@ fn writeFile f s =
 )
 
 
+fn getMaterialDependence s type =
+(
+	sceneMaps = #()
+	
+	for c in type.classes where c != undefined and findItem BitmapTypes c == 0 do 
+	(		
+		for g in s do
+		(
+			for m in getClassInstances c target:g where m != undefined do 
+			(					
+				appendIfUnique sceneMaps m
+			)
+		)
+	)	
+	
+	return sceneMaps
+)
+
+
 --TAB 1
 
 
@@ -302,7 +321,7 @@ rollout T1rollout2 "MATERIALS" (
 			iCnt += 1		
 		)*/
 
-		for i in material.classes where i != undefined do
+		/*for i in material.classes where i != undefined do
 		(
 			for ii in getClassInstances i do 
 			(	
@@ -313,7 +332,20 @@ rollout T1rollout2 "MATERIALS" (
 					iCnt += 1
 				)
 			)
-		)		
+		)*/
+		
+		toRename = #()
+		mat = getMaterialDependence selection material
+		tex = getMaterialDependence selection textureMap	
+		
+		join toRename mat
+		join toRename tex
+				
+		for i in toRename do 
+		(
+			i.name = renamerMaterials szModelID iCnt
+			iCnt += 1	
+		)
 	)
 	
 	on rnMatsType selected a do
@@ -393,15 +425,15 @@ rollout T1rollout3 "MAPS" (
 					ext = getFilenameType f
 							
 					n = (renamerMaps n iCnt) + ext
-											
+										
 					if(doesFileExist f) do
 					( 
 						ep = findItem oldTexPaths b.filename
 						
-						if(ep != 0) then n = toRename[ep][4]
+						if(ep != 0) then n = toRename[ep][5]
 						
 						append oldTex b
-						append toRename #(b, (p + n), (szMaps + n), f) 
+						append toRename #(b, (p + n), (szMaps + n), f, n) 
 				
 						if(ep == 0) do iCnt += 1
 						append oldTexPaths b.filename
@@ -413,9 +445,10 @@ rollout T1rollout3 "MAPS" (
 		for t in toRename do
 		(
 			t[1].filename = t[2]
+			t[1].name = getFilenameFile t[5]
 			
-			copyFile t[4] t[3]										
-		)
+			if(chk3.checked == true) then copyFile t[4] t[3] else copyFile t[4] t[2]
+		)		
 	)
 	
 	fn libAssetsPath szMaps =
@@ -452,6 +485,7 @@ rollout T2Rollout1 "Geometry" (
 	
 	-- TAB 2
 	fn ungroupRecursive s = for i in s where isGroupHead i and isValidNode i do explodeGroup i
+	fn findGroup s = for i in s where isGroupHead i and isValidNode i and i.name != szModelID collect i.name
 	
 	fn setPivot p =
 	(
@@ -1092,7 +1126,21 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		if(fileToLoad.count < 1) do return messageBox "Please save scene!" title: "Warning!"
 		if(not isSelected()) do return false
 		if(szModelID.count < 1) do return messageBox "Please do STEP 1" title: "Warning!"
+		
+		-- Check for used groups
+		grpErr = T2Rollout1.findGroup selection
+		if(grpErr.count > 0) do 
+		(	
+			errGroupMsg = "Found exscess groups!\nPress \"Yes\" for remove all groups and create one \"" + szModelID + "\" group!\n\nFound groups:\n"
+			for i in grpErr do errGroupMsg += i + "\n"
+			q = queryBox errGroupMsg title: "Warning!"
+			if(q == false) do return false
 			
+			T2Rollout1.ungroupRecursive selection
+			
+			group selection name:szModelID select:true		
+		)
+		
 		szDir = szSaveToPath + szModelID + "\\"
 		szMaps = szDir + "maps\\"
 		szPreview = szDir + "pictures\\"
@@ -1147,8 +1195,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		(
 			T1Rollout3.libAssetsPath szMaps
 		)
-			
-		
+				
 		-- Add Versions
 		saveNodes selection (szModels + "_tmp.max") quiet:true
 		resetMaxFile #noPrompt
@@ -1168,9 +1215,6 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			layer0 = LayerManager.getLayer 0
 			for i in objects do layer0.addNode i
 		)
-	
-
-
 			
 		savedMax = #()
 		-- Fix selection in 3Ds Max 2016		
@@ -1182,8 +1226,18 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			(
 				"max":
 				(
-					f = (szModels + szScene[ii])
-					saveNodes objects f saveAsVersion:(p[3] as integer) quiet:true
+					f = (szModels + szScene[ii])					
+					v = getMaxVersion()
+					
+					if(p[3] != v[v.count]) then
+					(
+						saveNodes objects f saveAsVersion:(p[3] as integer) quiet:true
+					)
+					else
+					(
+						saveNodes objects f quiet:true
+					)
+					
 					savedMax[1] = f				
 					savedMax[2] = p[3]
 				)
@@ -1200,7 +1254,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		if(savedMax[1] != undefined) do
 		(
 			l = getCSV savedMax[1]	savedMax[2]		
-			writeFile szInfo l
+			if(theRollout.chk5.checked == true) do writeFile szInfo l
 		)
 		
 		resetMaxFile #noPrompt
