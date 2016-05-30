@@ -19,11 +19,11 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.2"
+global szVersion = "1.0.3"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
-global szModelID = "1308"
+global szModelID = ""
 global szPreviewPath = #()
 global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
 global szScene = #()
@@ -214,7 +214,7 @@ rollout T1Rollout1 "OBJECTS"(
 	dropdownList rnObjsType "" pos:[215,25] width:70 height:40 enabled:true items:#("ID Name", "Full name", "Custom") align:#left
 	edittext rnObjsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnObjsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
-	edittext rnObjsPrevName "Objects name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001V01"
+	edittext rnObjsPrevName "Objects name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"_001V01"
 	checkbox chk1 "Clean layers" tooltip:"Move all objects to 0 (default) layer and remove all layers" pos:[110,55] checked:true
 
 	fn renamerObjects realName num =
@@ -274,7 +274,7 @@ rollout T1rollout2 "MATERIALS" (
 	dropdownList rnMatsType "" pos:[215,25] width:70 height:40 enabled:true items:#("ID Name", "Full Name", "Custom") align:#left
 	edittext rnMatsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnMatsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
-	edittext rnMatsPrevName "Materials name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001V01"
+	edittext rnMatsPrevName "Materials name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"_001V01"
 
 	fn renamerMaterials realName num =
 	(
@@ -369,7 +369,7 @@ rollout T1rollout3 "MAPS" (
 	dropdownList rnMapsType "" pos:[215,25] width:70 height:40 enabled:true items:#("ID Name", "Full Name", "Custom") align:#left
 	edittext rnMapsCustom "" pos:[290,25] width:80 height:20 enabled:false labelOnTop:true align:#left text:"custom_text"
 	dropdownList rnMapsPadding "" pos:[375,25] width:55 height:40 enabled:true items:#("##", "###", "####") align:#right selection:2
-	edittext rnMapsPrevName "Maps name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_001V01"
+	edittext rnMapsPrevName "Maps name preview" pos:[440,7] width:115 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"_001V01"
 	checkbox chk3 "Set Assets Path" tooltip:"Set assets path to RootPath + ID Name" pos:[110,55] checked:true
 	
 	fn renamerMaps realName num =
@@ -380,6 +380,7 @@ rollout T1rollout3 "MAPS" (
 		p = rnMapsPadding.selected.count
 		fullName = getFilenameFile (theRollout.fullname1.text)
 		idName = theRollout.ID.text
+		realName = getFilenameFile realName
 			
 		n = case t of 
 		(			
@@ -485,7 +486,8 @@ rollout T2Rollout1 "Geometry" (
 	
 	-- TAB 2
 	fn ungroupRecursive s = for i in s where isGroupHead i and isValidNode i do explodeGroup i
-	fn findGroup s = for i in s where isGroupHead i and isValidNode i and i.name != szModelID collect i.name
+	fn findGroup s = for i in s where isGroupHead i and isValidNode i and findString i.name szModelID == undefined collect i.name
+	fn autoRenameGroup s = for i in s where isGroupHead i and isValidNode i do i.name = uniqueName (szModelID + "_") numDigits: 3
 	
 	fn setPivot p =
 	(
@@ -548,10 +550,10 @@ rollout T2Rollout1 "Geometry" (
 		if(not isSelected()) do return false
 		
 		g = group selection
+		g.pivot = selection[1].pivot
 
 		g.pos = [0,0,0]
-		g.pos.z = 0 - selection.min.z
-			
+					
 		ungroup g		
 	)
 )
@@ -700,14 +702,14 @@ rollout T4Rollout1 "" (
 rollout theRollout "Library Toolset" --height:400
 (
 
-	edittext ID "ID Name" pos:[26,40] width:100 height:20 enabled:true labelOnTop:true align:#left text:"1380"
+	edittext ID "ID Name" pos:[26,40] width:100 height:20 enabled:true labelOnTop:true align:#left text:""
 	-- format1
 	dropdownList format1 "Format" pos:[130,40] width:100 height:40 items:#("3D Studio Max","FBX","OBJ") align:#left
 	dropdownList scn1 "Scene version" pos:[235,40] width:70 height:40 enabled:true items:#("none", "2013", "2014", "2015","2016") align:#left 
 	dropdownList render1 "Render" pos:[310,40] width:70 height:40 enabled:true items:#("none","VRay", "Corona", "Maxwell") align:#left
 	edittext version1 "Version" pos:[386,40] width:34 height:20 enabled:true labelOnTop:true align:#left text:"01"
 	button version1add "+" pos:[426,58] width:20 height:20 align:#left
-	edittext fullname1 "Full name + ext" pos:[460,40] frame:false width:130 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"1380_011801V01.max"
+	edittext fullname1 "Full name + ext" pos:[460,40] frame:false width:130 height:20 enabled:true labelOnTop:true align:#left readonly:true text:"_011801V01.max"
 	
 	-- format2
 	checkbox chk2 "" pos:[110,85] height:20
@@ -957,8 +959,8 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		fillSceneVersion scn3
 		
 		fillRender render1
-		fillRender render2
-		fillRender render3
+		--fillRender render2
+		--fillRender render3
 		
 		displayModelName n:1
 		displayModelName n:2
@@ -1125,20 +1127,18 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		fileToLoad = maxFilePath + maxFileName
 		if(fileToLoad.count < 1) do return messageBox "Please save scene!" title: "Warning!"
 		if(not isSelected()) do return false
-		if(szModelID.count < 1) do return messageBox "Please do STEP 1" title: "Warning!"
+		if(szModelID.count < 1) do return messageBox "Please indicate model ID Name!" title: "Warning!"
 		
 		-- Check for used groups
 		grpErr = T2Rollout1.findGroup selection
 		if(grpErr.count > 0) do 
 		(	
-			errGroupMsg = "Found exscess groups!\nPress \"Yes\" for remove all groups and create one \"" + szModelID + "\" group!\n\nFound groups:\n"
+			errGroupMsg = "Found exscess groups!\nPress \"Yes\" for auto rename groups to \"" + szModelID + "\"!\n\nFound groups:\n"
 			for i in grpErr do errGroupMsg += i + "\n"
 			q = queryBox errGroupMsg title: "Warning!"
 			if(q == false) do return false
 			
-			T2Rollout1.ungroupRecursive selection
-			
-			group selection name:szModelID select:true		
+			T2Rollout1.autoRenameGroup selection			
 		)
 		
 		szDir = szSaveToPath + szModelID + "\\"
