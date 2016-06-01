@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.3"
+global szVersion = "1.0.4"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -245,7 +245,7 @@ rollout T1Rollout1 "OBJECTS"(
 	
 	fn startRenameObjects = 
 	(
-		g = geometry
+		g = objects
 				
 		for i in 1 to g.count where isValidNode g[i] do
 		(
@@ -487,7 +487,7 @@ rollout T2Rollout1 "Geometry" (
 	-- TAB 2
 	fn ungroupRecursive s = for i in s where isGroupHead i and isValidNode i do explodeGroup i
 	fn findGroup s = for i in s where isGroupHead i and isValidNode i and findString i.name szModelID == undefined collect i.name
-	fn autoRenameGroup s = for i in s where isGroupHead i and isValidNode i do i.name = uniqueName (szModelID + "_") numDigits: 3
+	fn autoRenameGroup s = for i in s where isGroupHead i and isValidNode i do i.name = (uniqueName (szModelID + "_") numDigits: 3) + "V" + szModelVerison
 	
 	fn setPivot p =
 	(
@@ -513,8 +513,8 @@ rollout T2Rollout1 "Geometry" (
 		if(not isSelected()) do return false
 					
 		ungroupRecursive selection
-			
-		group selection name:szModelID select:true		
+		n = (uniqueName (szModelID + "_") numDigits: 3) + "V" + szModelVerison
+		group selection name:n select:true		
 	)
 	
 	on btnUngroup pressed do
