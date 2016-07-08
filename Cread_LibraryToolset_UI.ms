@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.4"
+global szVersion = "1.0.5"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -29,6 +29,9 @@ global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
 global szScene = #()
 global theRollout
 global szModelVerison = "01"
+
+global bReplaceNormal = true
+global bReplaceColorCorrect = true
 
 
 /* GLOBAL FUNCTIONS */
@@ -250,6 +253,67 @@ rollout T1Rollout1 "OBJECTS"(
 		for i in 1 to g.count where isValidNode g[i] do
 		(
 			g[i].name = renamerObjects (g[i].name) i
+		)
+	)
+	
+	fn replaceNormal = 
+	(		
+		if(findRenderer "V_Ray" == false) do return false
+		if(bReplaceNormal != true) do return false
+		
+		clearListener()
+		for i in getClassInstances VrayMtl do
+		(
+			b = i.texmap_bump
+			
+			if(b == undefined or classOf b != Normal_Bump) do continue
+			
+			nrm = b.normal_map 
+						
+			replaceInstances b (VRayNormalMap normal_map: nrm)
+		)
+	)
+	
+	fn replaceColorCorrect =
+	(
+		if(findRenderer "V_Ray" == false) do return false
+		if(bReplaceColorCorrect != true) do return false
+		if(colorcorrect == undefined) do return false
+		
+		clearListener()
+		-- Code by crazy1k
+		for m in (getClassinstances colorcorrect) do
+		(
+			mcc_gamma=1/m.gamma
+			mcc_color=m.src_color
+			if m.hsl_on==true then 
+			(
+				mcc_sat=m.hsl_sat_off/1.32+(m.hsl_sat_gain-100)/2.66
+				mcc_hue_off=m.hsl_hue_off
+			)
+			if m.hsv_on==true then 
+			(
+				mcc_sat=m.hsv_sat_off/1.32+(m.hsv_sat_gain-100)/2.66
+				mcc_hue_off=m.hsv_hue_off
+			)
+			mcc_mono=m.pre_mono
+			mcc_invert=m.pre_invert
+			if m.pre_on==true and (m.hsl_on==true or m.hsv_on==true) then
+			(
+				if (mcc_mono==false) and (mcc_invert==false) then replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) hueShift:mcc_hue_off saturation:mcc_sat gammaRGB:mcc_gamma lightnessMode:1)
+				if (mcc_mono==true) and (mcc_invert==false) then replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) hueShift:mcc_hue_off saturation:mcc_sat gammaRGB:mcc_gamma rewireMode:1 lightnessMode:1)
+				if (mcc_mono==false) and (mcc_invert==true) then replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) hueShift:mcc_hue_off saturation:mcc_sat gammaRGB:mcc_gamma rewireMode:2 lightnessMode:1)
+			)
+			if m.pre_on==true and (m.hsl_on==false and m.hsv_on==false) then 
+			(
+				if (mcc_mono==false) and (mcc_invert==false) then replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) gammaRGB:mcc_gamma lightnessMode:1)
+				if (mcc_mono==true) and (mcc_invert==false) then replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) gammaRGB:mcc_gamma rewireMode:1 lightnessMode:1)
+				if (mcc_mono==false) and (mcc_invert==true) then replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) gammaRGB:mcc_gamma rewireMode:2 lightnessMode:1)
+			)
+			if m.pre_on==false and (m.hsl_on==true or m.hsv_on==true) then
+				replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) hueShift:mcc_hue_off saturation:mcc_sat lightnessMode:1)
+			if m.pre_on==false and (m.hsl_on==false and m.hsv_on==false) then
+					replaceInstances m (color_correction color:mcc_color map:(getSubTexmap m 1) lightnessMode:1)
 		)
 	)
 	
@@ -558,6 +622,15 @@ rollout T2Rollout1 "Geometry" (
 	)
 )
 
+rollout T2Rollout2 "Shaders" 
+(
+	checkbox cbxReplaceNormal "Replace NormalMap > VrayNormalMap" checked: true pos: [170, 28]
+	checkbox cbxReplaceColorCorrect "Replace ColorCorrect > ColorCorrection" checked: true pos: [170, 56]
+	
+	on cbxReplaceNormal changed s do bReplaceNormal = s
+	on cbxReplaceColorCorrect changed s do bReplaceColorCorrect = s
+)
+
 --TAB 3
 rollout T3rollout1 "Pictures"
 (
@@ -774,6 +847,7 @@ case tc.SelectedTab.TabIndex of
 try
 (
 removeSubRollout theSubRollout T2Rollout1
+removeSubRollout theSubRollout T2Rollout2
 removeSubRollout theSubRollout T3Rollout1
 removeSubRollout theSubRollout T4Rollout1
 )
@@ -798,7 +872,10 @@ removeSubRollout theSubRollout T4Rollout1
 )
 catch()
 addSubRollout theSubRollout T2Rollout1
-T2Rollout1.height = 290
+T2Rollout1.height = 170
+addSubRollout theSubRollout T2Rollout2
+T2Rollout2.height = 95
+
 )
 
 2:
@@ -809,6 +886,7 @@ removeSubRollout theSubRollout T1Rollout1
 removeSubRollout theSubRollout T1Rollout2
 removeSubRollout theSubRollout T1Rollout3
 removeSubRollout theSubRollout T2Rollout1
+removeSubRollout theSubRollout T2Rollout2
 removeSubRollout theSubRollout T4Rollout1
 
 )
@@ -825,6 +903,7 @@ removeSubRollout theSubRollout T1Rollout1
 removeSubRollout theSubRollout T1Rollout2
 removeSubRollout theSubRollout T1Rollout3
 removeSubRollout theSubRollout T2Rollout1
+removeSubRollout theSubRollout T2Rollout2
 removeSubRollout theSubRollout T3Rollout1
 
 )
@@ -1152,7 +1231,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		if(theRollout.fullname3.enabled) do szScene[3] = theRollout.fullname3.text
 		
 		szZip = szSaveToPath + "Please wait, pack files.bat"
-		szInfo = szDir + "info.csv"
+		szInfo = szDir + (getFileNameFile szScene[1]) + ".csv"
 					
 		makeDir szDir	
 		makeDir szMaps	
@@ -1208,7 +1287,10 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		
 		T1Rollout1.startRenameObjects()
 		T1Rollout2.startRenameMaterials()
-	
+		
+		T1Rollout1.replaceNormal()
+		T1Rollout1.replaceColorCorrect()
+			
 		-- Remove layers
 		if(T1Rollout1.chk1.checked == true) do 
 		(
