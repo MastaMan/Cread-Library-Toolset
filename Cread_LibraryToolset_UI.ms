@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.5"
+global szVersion = "1.0.6"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -513,6 +513,39 @@ rollout T1rollout3 "MAPS" (
 			t[1].name = getFilenameFile t[5]
 			
 			if(chk3.checked == true) then copyFile t[4] t[3] else copyFile t[4] t[2]
+		)		
+	)
+	
+	fn startRenameAndCopyIES szIES = 
+	(	
+		global iIesCnt = 1
+		
+		fn copyIes ies szIES =
+		(
+			if(ies == undefined) do return undefined
+			
+			ies = getFullPath ies
+			
+			if(not doesFileExist ies) do return ies
+			
+			n = filenameFromPath ies
+			ext = getFilenameType ies
+			
+			f = szIES  + (renamerMaps n iIesCnt) + ext
+			
+			copyFile ies f
+			
+			iIesCnt += 1
+			
+			return f
+		)
+		
+		
+		for l in lights where l.isSelected == true do
+		(
+			if(isProperty l #ies_file) do l.ies_file = copyIes (l.ies_file) szIES
+			if(isProperty l #webFile) do l.webFile = copyIes (l.webFile) szIES
+			if(isProperty l #iesFile) do l.iesFile = copyIes (l.iesFile) szIES
 		)		
 	)
 	
@@ -1222,6 +1255,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		
 		szDir = szSaveToPath + szModelID + "\\"
 		szMaps = szDir + "maps\\"
+		szIES = szDir + "ies\\"
 		szPreview = szDir + "pictures\\"
 		szModels = szDir + "models\\"
 			
@@ -1235,6 +1269,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 					
 		makeDir szDir	
 		makeDir szMaps	
+		makeDir szIES
 		makeDir szPreview	
 		makeDir szModels
 		
@@ -1269,6 +1304,8 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		currentRender = renderers.current
 
 		T1Rollout3.startRenameAndCopyMaps szMaps
+		
+		T1Rollout3.startRenameAndCopyIES szIES
 		
 		if(T1Rollout3.chk3.checked == true) do 
 		(
