@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.6"
+global szVersion = "1.0.7"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -1213,7 +1213,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 				(				
 					if(invalidBitmap b and findItem oldTex b == 0) then
 					(										
-						append errorTex #("empty file name path! Map: " + b.name, i.name) 
+						-- Fixed 03.04.2017 
+						--append errorTex #("empty file name path! Map: " + b.name, i.name) 
+						
 						append oldTex b
 					)
 					else if (validBitmap b and doesFileExist (getFullPath (b.filename)) == false) then
@@ -1297,7 +1299,8 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			if(doesFileExist i) do 
 			(
 				iPreview += 1
-				copyFile i (szPreview + "picture" + iPreview as string + p)
+				iterator = if(iPreview == 1) then "" else iPreview as string + "_"
+				copyFile i (szPreview + iterator + szModelID + p)
 			)
 		)
 		
