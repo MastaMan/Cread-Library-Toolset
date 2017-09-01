@@ -1388,6 +1388,6 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		if(q) do shellLaunch szDir ""	
 	)
 )
-createDialog theRollout 610 680
+createDialog theRollout 610 700
 
 /* UI code END */
