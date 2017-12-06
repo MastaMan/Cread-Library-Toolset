@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.7"
+global szVersion = "1.0.8"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -1058,7 +1058,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 	
 	fn displayModelName n:1 =
 	(
-		f = getControl ("fullname" + n as string)
+		local f = getControl ("fullname" + n as string)		
 		f.text = getModelFullName n:n
 	)
 	
@@ -1236,6 +1236,40 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		saveMaterialLibrary p
 	)
 	
+	fn resizeImage f size_w: 500 quality: 60 =
+	(
+		p = getFilenamePath f
+		n = getFilenameFile f
+		
+		b = openBitMap f 
+		if(b == undefined) do return false
+		i = getBitmapInfo b
+		w = renderWidth = i[3]
+		h = renderHeight = i[4]
+		a = getRendImageAspect()
+		
+		if(w < size_w) do return false
+		oq = JPEG.getQuality()
+		JPEG.setQuality quality
+		
+		makeDir @"C:\temp\"
+		tmp = @"C:\temp\tmp_preview_bitmap.jpg"
+
+		size_h = if(w > h) then size_w / a else size_w * a
+		
+		nb = bitmap size_w size_h filename: tmp gamma: 0.2
+		
+		cnb = copy b nb
+		save nb
+		close cnb
+		free cnb
+		
+		JPEG.setQuality oq
+		
+		deleteFile f
+		copyFile tmp (p + n + ".jpg")
+	)
+	
 	on SaveModels pressed do
 	(
 		fileToLoad = maxFilePath + maxFileName
@@ -1300,7 +1334,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			(
 				iPreview += 1
 				iterator = if(iPreview == 1) then "" else iPreview as string + "_"
-				copyFile i (szPreview + iterator + szModelID + p)
+				nn = szPreview + iterator + szModelID + p
+				copyFile i nn
+				resizeImage nn
 			)
 		)
 		
