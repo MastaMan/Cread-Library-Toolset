@@ -1255,7 +1255,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		makeDir @"C:\temp\"
 		tmp = @"C:\temp\tmp_preview_bitmap.jpg"
 
-		size_h = if(w > h) then size_w / a else size_w * a
+		size_h = size_w / a
 		
 		nb = bitmap size_w size_h filename: tmp gamma: 0.2
 		
