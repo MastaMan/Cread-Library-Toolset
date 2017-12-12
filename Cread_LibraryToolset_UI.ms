@@ -19,7 +19,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.8"
+global szVersion = "1.0.9"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -1270,6 +1270,39 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		copyFile tmp (p + n + ".jpg")
 	)
 	
+	fn resizeImage2 f size_w: 500 quality: 60 =
+	(
+		p = getFilenamePath f
+		n = getFilenameFile f
+		
+		
+		tx = BitmapTex filename: f
+		if(tx.filename == undefined) do return false
+		
+		w = renderWidth = tx.bitmap.width
+		h = renderHeight = tx.bitmap.height
+		a = getRendImageAspect()
+						
+		
+		if(w < size_w) do return false
+		oq = JPEG.getQuality()
+		JPEG.setQuality quality
+		
+		makeDir @"C:\temp\"
+		tmp = @"C:\temp\tmp_preview_bitmap.jpg"
+
+		size_h = size_w / a
+		
+		nb = renderMap tx filter: on size: [size_w, size_h] 
+		nb.filename = tmp			
+		save nb
+				
+		JPEG.setQuality oq
+		
+		deleteFile f
+		copyFile tmp (p + n + ".jpg")
+	)
+	
 	on SaveModels pressed do
 	(
 		fileToLoad = maxFilePath + maxFileName
@@ -1335,8 +1368,9 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 				iPreview += 1
 				iterator = if(iPreview == 1) then "" else iPreview as string + "_"
 				nn = szPreview + iterator + szModelID + p
+				deleteFile nn
 				copyFile i nn
-				resizeImage nn
+				resizeImage2 nn
 			)
 		)
 		
