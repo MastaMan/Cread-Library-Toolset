@@ -7,6 +7,8 @@ _____________________
 Release date: 19th April 2016
 UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com
 Developer: MastaMan
+
+Updated 16.11.2020
 	
 */
 
@@ -19,7 +21,7 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.0.9"
+global szVersion = "1.1.0"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -29,6 +31,7 @@ global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
 global szScene = #()
 global theRollout
 global szModelVerison = "01"
+global dnDateTime = (dotNetClass "System.DateTime").Now
 
 global bReplaceNormal = true
 global bReplaceColorCorrect = true
@@ -805,7 +808,7 @@ rollout T4Rollout1 "" (
 
 
 --Create a rollout
-rollout theRollout "Library Toolset" --height:400
+rollout theRollout "Library Toolset v14" --height:400
 (
 
 	edittext ID "ID Name" pos:[26,40] width:100 height:20 enabled:true labelOnTop:true align:#left text:""
@@ -976,29 +979,12 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 			#("FBX", "fbx", "02"),
 			#("OBJ", "obj", "03")
 	)
+	
+	
 		
-	global gMaxVersion = #(
-		#("2011", "13"),
-		#("2012", "14"),
-		#("2013", "15"),
-		#("2014", "16"),
-		#("2015", "17"),
-		#("2016", "18"),
-		#("2017", "19"),
-		#("2018", "20")
-	)
-	
-	global gFbxVersion = #(
-		#("2011", "13"),
-		#("2012", "14"),
-		#("2013", "15"),
-		#("2014", "16"),
-		#("2015", "17"),
-		#("2016", "18"),
-		#("2017", "19"),
-		#("2018", "20")
-	)
-	
+	global gMaxVersion = #()
+	global gFbxVersion = #()
+		
 	global gRenderVersion = #(
 		#("none", "00"),
 		#("VRay", "01"),
@@ -1064,6 +1050,12 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 	
 	on theRollout open do
 	(
+		for i in 2011 to (dnDateTime.year as integer) do (
+			sub = i - 1998
+			append gMaxVersion #(i as string, sub as string)
+			append gFbxVersion #(i as string, sub as string)
+		)
+		
 		initTc tc
 		
 		fillSceneVersion scn1
@@ -1236,7 +1228,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		saveMaterialLibrary p
 	)
 	
-	fn resizeImage f size_w: 500 quality: 60 =
+	fn resizeImage f size_w: 500 quality: 90 =
 	(
 		p = getFilenamePath f
 		n = getFilenameFile f
@@ -1270,7 +1262,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		copyFile tmp (p + n + ".jpg")
 	)
 	
-	fn resizeImage2 f size_w: 500 quality: 60 =
+	fn resizeImage2 f size_w: 500 quality: 90 =
 	(
 		p = getFilenamePath f
 		n = getFilenameFile f
