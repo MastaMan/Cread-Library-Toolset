@@ -506,7 +506,7 @@ rollout T1rollout3 "MAPS" (
 		
 		for i in selection where i.material != undefined do
 		(
-			for type in BitmapTypes do 
+			for type in BitmapTypes where type[1] != undefined do 
 			(	
 				for b in getClassInstances type[1] target:i where (validBitmap b type) and findItem oldTex b == 0 do
 				(																	
@@ -578,7 +578,7 @@ rollout T1rollout3 "MAPS" (
 	
 	fn libAssetsPath szMaps =
 	(		
-		for type in BitmapTypes do
+		for type in BitmapTypes where type[1] != undefined do
 		(
 			for b in getClassInstances type[1] where (validBitmap b type) do setBitmapFile b type v: (szMaps + (filenameFromPath (getBitmapFile b type)))
 		)
@@ -1223,7 +1223,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 				
 		for i in selection where i.material != undefined do
 		(
-			for type in BitmapTypes do
+			for type in BitmapTypes where type[1] != undefined do
 			(
 				for b in getClassInstances type[1] target:i where b != undefined do
 				(				
