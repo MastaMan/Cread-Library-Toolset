@@ -8,7 +8,7 @@ Release date: 19th April 2016
 UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com
 Developer: MastaMan
 
-Updated 16.11.2020
+Updated 05.08.2022
 	
 */
 
@@ -21,13 +21,21 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.1.0"
+global szVersion = "1.2.0"
+global globalVersion = "v15"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
 global szModelID = ""
 global szPreviewPath = #()
-global BitmapTypes = #(Bitmaptexture, CoronaBitmap)
+global BitmapTypes = #(
+	#(Bitmaptexture, #filename),
+	#(CoronaBitmap, #filename),
+	#(VRayBitmap, #HDRIMapName),
+	#(VRayHDRI, #HDRIMapName)
+)
+global BitmapClasses = for ii in BitmapTypes collect ii[1]
+
 global szScene = #()
 global theRollout
 global szModelVerison = "01"
@@ -162,14 +170,29 @@ fn polyCount s spaces: true =
 	return (trimLeft r " ")
 )
 
-fn invalidBitmap b = 
+fn invalidBitmap b type = 
 (	
-	return b == undefined or b.filename == undefined or b.filename == "" or b.filename.count == 0
+	if(not hasProperty b type[2]) do return true
+	local p = getProperty b type[2]
+	return b == undefined or p == undefined or p == "" or p.count == 0
 )
 
-fn validBitmap b = 
+fn validBitmap b type = 
 (	
-	return b != undefined and b.filename != undefined and b.filename != "" and b.filename.count != 0
+	if(not hasProperty b type[2]) do return false
+	local p = getProperty b type[2]
+	return b != undefined and p != undefined and p != "" and p.count != 0
+)
+
+fn getBitmapFile b type = (
+	if(not hasProperty b type[2]) do return undefined
+	return getProperty b type[2]
+)
+
+fn setBitmapFile b type v: undefined = (
+	if(not hasProperty b type[2]) do return false
+	setProperty b type[2] v
+	return true
 )
 
 fn getFullPath p = 
@@ -178,6 +201,7 @@ fn getFullPath p =
 	
 	return mapPaths.getFullFilePath (filenameFromPath  p)
 )
+
 
 fn round n = ((n * 100) as integer) / 100.0
 
@@ -196,7 +220,7 @@ fn getMaterialDependence s type =
 (
 	sceneMaps = #()
 	
-	for c in type.classes where c != undefined and findItem BitmapTypes c == 0 do 
+	for c in type.classes where c != undefined and findItem BitmapClasses c == 0  do
 	(		
 		for g in s do
 		(
@@ -482,40 +506,40 @@ rollout T1rollout3 "MAPS" (
 		
 		for i in selection where i.material != undefined do
 		(
-			for type in BitmapTypes where classOf type == textureMap do 
+			for type in BitmapTypes do 
 			(	
-				for b in getClassInstances type target:i where (validBitmap b) and findItem oldTex b == 0 do
+				for b in getClassInstances type[1] target:i where (validBitmap b type) and findItem oldTex b == 0 do
 				(																	
-					f = getFullPath (b.filename)
+					f = getFullPath (getBitmapFile b type)
 				
 					n = filenameFromPath f
 					p = getFilenamePath f
 					ext = getFilenameType f
-							
+					
 					n = (renamerMaps n iCnt) + ext
-										
+					
 					if(doesFileExist f) do
 					( 
-						ep = findItem oldTexPaths b.filename
+						ep = findItem oldTexPaths (getBitmapFile b type)
 						
 						if(ep != 0) then n = toRename[ep][5]
 						
 						append oldTex b
-						append toRename #(b, (p + n), (szMaps + n), f, n) 
-				
+						append toRename #(b, type, (p + n), (szMaps + n), f, n) 
+						
 						if(ep == 0) do iCnt += 1
-						append oldTexPaths b.filename
+						append oldTexPaths (getBitmapFile b type)
 					)												
 				)
 			)
 		)
-							
-		for t in toRename do
-		(
-			t[1].filename = t[2]
-			t[1].name = getFilenameFile t[5]
+		
+		for t in toRename do (
+			setBitmapFile t[1] t[2] v: t[3]
 			
-			if(chk3.checked == true) then copyFile t[4] t[3] else copyFile t[4] t[2]
+			t[1].name = getFilenameFile t[6]
+			
+			if(chk3.checked == true) then copyFile t[5] t[4] else copyFile t[5] t[3]
 		)		
 	)
 	
@@ -554,9 +578,9 @@ rollout T1rollout3 "MAPS" (
 	
 	fn libAssetsPath szMaps =
 	(		
-		for type in BitmapTypes where classOf type == textureMap do
+		for type in BitmapTypes do
 		(
-			for b in getClassInstances type where (validBitmap b) do b.filename = szMaps + (filenameFromPath b.filename)
+			for b in getClassInstances type[1] where (validBitmap b type) do setBitmapFile b type v: (szMaps + (filenameFromPath (getBitmapFile b type)))
 		)
 	)
 	
@@ -808,7 +832,7 @@ rollout T4Rollout1 "" (
 
 
 --Create a rollout
-rollout theRollout "Library Toolset v14" --height:400
+rollout theRollout ("Library Toolset " + ::globalVersion) --height:400
 (
 
 	edittext ID "ID Name" pos:[26,40] width:100 height:20 enabled:true labelOnTop:true align:#left text:""
@@ -1199,20 +1223,20 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 				
 		for i in selection where i.material != undefined do
 		(
-			for type in BitmapTypes where classOf type == textureMap do
+			for type in BitmapTypes do
 			(
-				for b in getClassInstances type target:i where b != undefined do
+				for b in getClassInstances type[1] target:i where b != undefined do
 				(				
-					if(invalidBitmap b and findItem oldTex b == 0) then
+					if((invalidBitmap b type) and findItem oldTex b == 0) then
 					(										
 						-- Fixed 03.04.2017 
 						--append errorTex #("empty file name path! Map: " + b.name, i.name) 
 						
 						append oldTex b
 					)
-					else if (validBitmap b and doesFileExist (getFullPath (b.filename)) == false) then
+					else if ((validBitmap b type) and doesFileExist (getFullPath (getBitmapFile b type)) == false) then
 					(
-						append errorTex #(b.filename, i.name) 
+						append errorTex #((getBitmapFile b type), i.name) 
 					)
 				)
 			)
