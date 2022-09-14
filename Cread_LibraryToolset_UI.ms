@@ -8,7 +8,7 @@ Release date: 19th April 2016
 UI Design: Alberto Gutierrez | albertogutierrez@estudicread.com
 Developer: MastaMan
 
-Updated 05.08.2022
+Updated 14.09.2022
 	
 */
 
@@ -21,8 +21,8 @@ try(destroyDialog theRollout)catch()
 
 /* GLOBAL VARIABLES */
 
-global szVersion = "1.2.0"
-global globalVersion = "v15"
+global szVersion = "1.2.1"
+global globalVersion = "v16"
 global szSaveToPath = @"\\nas\library\"
 global szSaveImagesToPath = @"\\nas\library\"
 global szGoodChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz \\;:1234567890!@#$%^&*()_+~'.,[]{}" 
@@ -465,22 +465,22 @@ rollout T1rollout3 "MAPS" (
 	
 	fn renamerMaps realName num =
 	(
-		m = rnMapsMode.selection
-		t = rnMapsType.selection
-		c = rnMapsCustom.text
-		p = rnMapsPadding.selected.count
-		fullName = getFilenameFile (theRollout.fullname1.text)
-		idName = theRollout.ID.text
+		local m = rnMapsMode.selection
+		local t = rnMapsType.selection
+		local c = rnMapsCustom.text
+		local p = rnMapsPadding.selected.count
+		local fullName = getFilenameFile (theRollout.fullname1.text)
+		local idName = theRollout.ID.text
 		realName = getFilenameFile realName
 			
-		n = case t of 
+		local n = case t of 
 		(			
 			2: fullName
 			3: c
 			default: idName
 		)
 			
-		o = case m of
+		local o = case m of
 		(
 			2: n + "_" + realName
 			3: realName + "_" + n 
@@ -510,19 +510,18 @@ rollout T1rollout3 "MAPS" (
 			(	
 				for b in getClassInstances type[1] target:i where (validBitmap b type) and findItem oldTex b == 0 do
 				(																	
-					f = getFullPath (getBitmapFile b type)
+					local f = getFullPath (getBitmapFile b type)
 				
-					n = filenameFromPath f
-					p = getFilenamePath f
-					ext = getFilenameType f
+					local n = filenameFromPath f
+					local p = getFilenamePath f
+					local ext = getFilenameType f
 					
 					n = (renamerMaps n iCnt) + ext
 					
 					if(doesFileExist f) do
 					( 
-						ep = findItem oldTexPaths (getBitmapFile b type)
-						
-						if(ep != 0) then n = toRename[ep][5]
+						local ep = findItem oldTexPaths (getBitmapFile b type)
+						if(ep != 0) then n = toRename[ep][6]
 						
 						append oldTex b
 						append toRename #(b, type, (p + n), (szMaps + n), f, n) 
@@ -1391,7 +1390,7 @@ button SaveModels "Save Models" pos:[210,595] width:200 height:60 align:#left
 		)
 		
 		currentRender = renderers.current
-
+		
 		T1Rollout3.startRenameAndCopyMaps szMaps
 		
 		T1Rollout3.startRenameAndCopyIES szIES
